@@ -1,0 +1,21 @@
+{
+  "name": "estoque-autoeletrica",
+  "version": "1.0.0",
+  "description": "Sistema Offline-First de Controle de Estoque para Autoelétrica (PC + Celular via Wi-Fi)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "keywords": [
+    "autoeletrica",
+    "estoque",
+    "offline-first",
+    "pwa",
+    "sqlite"
+  ],
+  "license": "MIT"
+}

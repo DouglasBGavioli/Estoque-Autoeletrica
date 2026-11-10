@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>EletrocarDoGuiGui — Estoque Offline & Wi-Fi</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- SIDEBAR (PC) -->
+    <aside class="sidebar">
+      <div class="brand-logo">
+        <img src="/icon.svg" alt="EletrocarDoGuiGui" class="brand-icon-img" />
+        <div>
+          <div class="brand-title">EletrocarDoGuiGui</div>
+          <div class="brand-subtitle">Estoque & Oficina Offline</div>
+        </div>
+      </div>
+
+      <ul class="nav-list">
+        <li>
+          <button class="nav-btn active" data-tab="dashboard" onclick="app.switchTab('dashboard')">
+            <span class="nav-btn-left">📊 Visão Geral</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-tab="inventory" onclick="app.switchTab('inventory')">
+            <span class="nav-btn-left">📦 Estoque de Peças</span>
+            <span class="nav-badge neutral" id="badge-total-products">0</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-tab="restock" onclick="app.switchTab('restock')">
+            <span class="nav-btn-left">🛒 Lista de Reposição</span>
+            <span class="nav-badge" id="badge-low-stock" style="display:none">0</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-tab="movements" onclick="app.switchTab('movements')">
+            <span class="nav-btn-left">🔧 Entradas & Saídas (OS)</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-tab="cores" onclick="app.switchTab('cores')">
+            <span class="nav-btn-left">♻️ Cascos & Recond.</span>
+            <span class="nav-badge neutral" id="badge-cores-count">0</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-tab="sync" onclick="app.switchTab('sync')">
+            <span class="nav-btn-left">📡 Sincronizar Wi-Fi & Backup</span>
+          </button>
+        </li>
+      </ul>
+
+      <div class="sync-card">
+        <div class="sync-status-row">
+          <span class="status-dot" id="sync-dot"></span>
+          <span id="sync-status-text">Sincronizado via Wi-Fi</span>
+        </div>
+        <div class="sync-meta" id="sync-meta-text">Banco local ativo neste aparelho</div>
+        <div style="display:flex; gap:0.4rem; margin-top:0.2rem;">
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="app.manualSync()">
+            🔄 Sincronizar
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="app.openQrModal()" title="Conectar Celular via Wi-Fi">
+            📱 QR
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div class="main-content">
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div class="mobile-brand-bar">
+          <div class="mobile-brand-left">
+            <img src="/icon.svg" alt="EletrocarDoGuiGui" class="brand-icon-img-sm" />
+            <span class="mobile-brand-name">EletrocarDoGuiGui</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="app.openQrModal()">
+            📱 Wi-Fi / QR
+          </button>
+        </div>
+
+        <div class="topbar-search">
+          <div class="search-input-wrap">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              id="global-search"
+              class="search-input"
+              placeholder="Buscar peça, código Bosch/Gauss/Ikro, veículo, gaveta ou código de barras..."
+              oninput="app.handleGlobalSearch(this.value)"
+            />
+          </div>
+          <button class="btn btn-secondary" onclick="app.openBarcodeScanner('search')" title="Ler código de barras com a câmera">
+            📷 Bipar
+          </button>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn btn-secondary" onclick="app.openQuickMovementModal('entrada')">
+            📥 <span>Entrada</span>
+          </button>
+          <button class="btn btn-secondary" onclick="app.openQuickMovementModal('saida')">
+            📤 <span>Baixa / OS</span>
+          </button>
+          <button class="btn btn-primary" onclick="app.openProductModal()">
+            ➕ <span>Nova Peça</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTAINER DAS ABAS -->
+      <main class="page-container">
+        <!-- ABA 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-view">
+          <div class="section-header-bar">
+            <div>
+              <h1 class="section-main-title">Painel EletrocarDoGuiGui</h1>
+              <p class="section-subtitle">
+                Controle financeiro de estoque, margens de lucro, links de reposição e aplicações na oficina
+              </p>
+            </div>
+            <div class="section-header-actions">
+              <button class="btn btn-secondary btn-sm" onclick="app.openQrModal()">
+                📱 Conectar Celular Wi-Fi
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="app.exportBackupJson()">
+                💾 Salvar Backup
+              </button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" id="dashboard-kpis"></div>
+
+          <div class="two-col-grid">
+            <!-- Alerta de Reposição -->
+            <div class="panel-box">
+              <div class="panel-box-header">
+                <h3 style="font-size:0.95rem; font-weight:800; color:#f87171;">
+                  ⚠️ Alerta de Reposição (Mínimo)
+                </h3>
+                <button class="btn btn-secondary btn-sm" onclick="app.switchTab('restock')">
+                  Ver Tudo →
+                </button>
+              </div>
+              <div id="dashboard-low-stock-list"></div>
+            </div>
+
+            <!-- Últimas Movimentações / OS -->
+            <div class="panel-box">
+              <div class="panel-box-header">
+                <h3 style="font-size:0.95rem; font-weight:800; color:var(--accent);">
+                  🔧 Últimas Entradas e Saídas (OS)
+                </h3>
+                <button class="btn btn-secondary btn-sm" onclick="app.switchTab('movements')">
+                  Ver Tudo →
+                </button>
+              </div>
+              <div id="dashboard-recent-movements"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ABA 2: ESTOQUE DE PEÇAS -->
+        <section id="tab-inventory" class="tab-view" style="display:none;">
+          <div class="filters-bar">
+            <select id="filter-category" class="filter-select" onchange="app.renderInventory()">
+              <option value="">Todas as Categorias</option>
+              <option value="Alternador">Alternador e Componentes</option>
+              <option value="Motor de Partida">Motor de Partida</option>
+              <option value="Relés e Fusíveis">Relés e Fusíveis</option>
+              <option value="Iluminação e Lâmpadas">Iluminação e Lâmpadas</option>
+              <option value="Baterias e Cabos">Baterias e Cabos</option>
+              <option value="Injeção e Ignição">Injeção e Ignição</option>
+              <option value="Chicotes e Conectores">Chicotes e Conectores</option>
+              <option value="Sensores e Atuadores">Sensores e Atuadores</option>
+              <option value="Insumos e Diversos">Insumos e Diversos</option>
+            </select>
+
+            <select id="filter-voltage" class="filter-select" onchange="app.renderInventory()">
+              <option value="">Todas as Voltagens</option>
+              <option value="12V">12V (Linha Leve)</option>
+              <option value="24V">24V (Caminhão / Pesada)</option>
+              <option value="Bivolt">Bivolt 12V/24V</option>
+              <option value="N/A">Sem Voltagem (Mecânico/Insumo)</option>
+            </select>
+
+            <select id="filter-condition" class="filter-select" onchange="app.renderInventory()">
+              <option value="">Todas as Condições</option>
+              <option value="novo">Peça Nova</option>
+              <option value="recondicionado">Recondicionado (Revisado)</option>
+              <option value="casco_base_troca">Casco (Base de Troca)</option>
+            </select>
+
+            <select id="filter-stock-status" class="filter-select" onchange="app.renderInventory()">
+              <option value="">Qualquer Saldo</option>
+              <option value="low">⚠️ Abaixo/Igual ao Mínimo</option>
+              <option value="zero">🚨 Zerado no Estoque</option>
+              <option value="ok">✅ Estoque Normal</option>
+            </select>
+
+            <button class="btn btn-secondary btn-sm" onclick="app.clearFilters()">
+              Limpar Filtros
+            </button>
+          </div>
+
+          <div id="inventory-grid" class="products-grid"></div>
+        </section>
+
+        <!-- ABA 3: LISTA DE REPOSIÇÃO (COMPRAS) -->
+        <section id="tab-restock" class="tab-view" style="display:none;">
+          <div class="section-header-bar">
+            <div>
+              <h2 class="section-main-title">🛒 Lista Inteligente de Reposição</h2>
+              <p class="section-subtitle">
+                Peças que atingiram o estoque mínimo com acesso rápido ao link de compra salvo e cotação no WhatsApp
+              </p>
+            </div>
+            <div id="restock-summary-badge"></div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table mobile-cards">
+              <thead>
+                <tr>
+                  <th>Peça / Código</th>
+                  <th>Localização</th>
+                  <th>Saldo Atual / Mín.</th>
+                  <th>Sugestão Compra</th>
+                  <th>Último Preço Compra</th>
+                  <th>Links de Compra Salvos & Fornecedor</th>
+                  <th>Ação Rápida</th>
+                </tr>
+              </thead>
+              <tbody id="restock-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ABA 4: MOVIMENTAÇÕES E ORDENS DE SERVIÇO -->
+        <section id="tab-movements" class="tab-view" style="display:none;">
+          <div class="section-header-bar">
+            <div>
+              <h2 class="section-main-title">🔧 Histórico de Entradas, Baixas e OS</h2>
+              <p class="section-subtitle">
+                Consulte todas as peças que entraram ou foram aplicadas nos veículos dos clientes
+              </p>
+            </div>
+            <div class="movement-filters-row">
+              <input
+                type="search"
+                id="movement-search"
+                class="form-input"
+                placeholder="Filtrar por placa, cliente, carro ou peça..."
+                oninput="app.renderMovements()"
+              />
+              <select id="movement-type-filter" class="filter-select" onchange="app.renderMovements()">
+                <option value="">Entradas e Saídas</option>
+                <option value="entrada">📥 Somente Entradas</option>
+                <option value="saida">📤 Somente Saídas / OS</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table mobile-cards">
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Tipo</th>
+                  <th>Peça / Código</th>
+                  <th>Qtd.</th>
+                  <th>Valores (Compra / Venda)</th>
+                  <th>Veículo / Placa / Cliente / Fornecedor</th>
+                  <th>Aparelho</th>
+                </tr>
+              </thead>
+              <tbody id="movements-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ABA 5: CASCOS E RECONDICIONADOS -->
+        <section id="tab-cores" class="tab-view" style="display:none;">
+          <div class="section-header-bar">
+            <div>
+              <h2 class="section-main-title">♻️ Controle de Cascos & Peças Recondicionadas</h2>
+              <p class="section-subtitle">
+                Alternadores, motores de partida e baterias revisados na bancada ou aguardando reforma (base de troca)
+              </p>
+            </div>
+            <button class="btn btn-primary" onclick="app.openProductModal(null, 'recondicionado')">
+              ➕ Cadastrar Recondicionado / Casco
+            </button>
+          </div>
+          <div id="cores-grid" class="products-grid"></div>
+        </section>
+
+        <!-- ABA 6: SINCRONIZAÇÃO WI-FI & BACKUP -->
+        <section id="tab-sync" class="tab-view" style="display:none;">
+          <div class="two-col-grid">
+            <!-- Card Conectar Celular via Wi-Fi -->
+            <div class="product-card">
+              <h3 style="font-size:1.08rem; font-weight:800; color:var(--accent);">
+                📡 Sincronização Wi-Fi (PC ↔ Celular)
+              </h3>
+              <p style="font-size:0.85rem; color:var(--text-secondary);">
+                Com o celular conectado no mesmo Wi-Fi da oficina, escaneie o QR Code abaixo ou digite o endereço no navegador do celular.
+              </p>
+              <div id="sync-tab-qr-list" style="display:flex; flex-direction:column; gap:1rem;"></div>
+              <div class="product-specs">
+                <div class="spec-line">
+                  <span class="spec-label">Como instalar:</span>
+                  <span>No celular, abra o link acima e toque em <strong>"Adicionar à Tela Inicial"</strong> ou <strong>"Instalar Aplicativo"</strong>.</span>
+                </div>
+                <div class="spec-line">
+                  <span class="spec-label">Fora da oficina:</span>
+                  <span>O celular guarda uma cópia completa offline e sincroniza sozinho quando reconectar no Wi-Fi.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Identificação do Aparelho e Backup -->
+            <div class="product-card">
+              <h3 style="font-size:1.08rem; font-weight:800;">
+                💾 Segurança de Dados & Backup Offline
+              </h3>
+              <div class="form-group">
+                <label class="form-label">Nome deste Aparelho (aparece nas baixas e entradas)</label>
+                <div style="display:flex; gap:0.5rem;">
+                  <input type="text" id="device-name-input" class="form-input" placeholder="Ex: PC Oficina ou Celular Douglas" />
+                  <button class="btn btn-secondary" onclick="app.saveDeviceName()">Salvar</button>
+                </div>
+              </div>
+
+              <div class="form-section-title">Exportar Dados</div>
+              <div style="display:flex; flex-wrap:wrap; gap:0.65rem;">
+                <button class="btn btn-primary" onclick="app.exportBackupJson()">
+                  📥 Baixar Backup Completo (.JSON)
+                </button>
+                <button class="btn btn-secondary" onclick="app.exportInventoryCsv()">
+                  📊 Exportar Planilha Excel (.CSV)
+                </button>
+              </div>
+
+              <div class="form-section-title">Restaurar ou Importar Backup (.JSON)</div>
+              <p style="font-size:0.8rem; color:var(--text-secondary);">
+                Você também pode transferir os dados entre PC e Celular enviando o arquivo <code>.json</code> pelo WhatsApp e importando abaixo:
+              </p>
+              <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                <input type="file" id="import-backup-file" accept=".json" class="form-input" />
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="btn btn-secondary" onclick="app.handleImportBackup(false)">
+                    ➕ Mesclar com Estoque Atual
+                  </button>
+                  <button class="btn btn-danger" onclick="app.handleImportBackup(true)">
+                    🔄 Substituir Tudo pelo Backup
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- BARRA DE NAVEGAÇÃO INFERIOR (CELULAR) -->
+  <nav class="mobile-bottom-nav">
+    <button class="mob-nav-btn active" data-tab="dashboard" onclick="app.switchTab('dashboard')">
+      <span>📊</span>
+      <span>Painel</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="inventory" onclick="app.switchTab('inventory')">
+      <span>📦</span>
+      <span>Estoque</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="restock" onclick="app.switchTab('restock')">
+      <span>🛒</span>
+      <span>Comprar</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="movements" onclick="app.switchTab('movements')">
+      <span>🔧</span>
+      <span>OS/Baixas</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="sync" onclick="app.switchTab('sync')">
+      <span>📡</span>
+      <span>Wi-Fi/Backup</span>
+    </button>
+  </nav>
+
+  <!-- MODAL 1: CADASTRO / EDIÇÃO DE PEÇA -->
+  <div class="modal-backdrop" id="modal-product">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-product-title">➕ Cadastrar Nova Peça</div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('modal-product')">✕</button>
+      </div>
+      <form id="form-product" class="modal-body" onsubmit="app.handleSaveProduct(event)">
+        <input type="hidden" id="prod-id" />
+
+        <div class="form-section-title">1. Identificação e Códigos da Peça</div>
+        <div class="form-grid">
+          <div class="form-group col-8">
+            <label class="form-label">Nome / Descrição da Peça *</label>
+            <input type="text" id="prod-name" class="form-input" required placeholder="Ex: Regulador de Voltagem 14V Bosch Gol G5 / Fox" />
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Código da Peça (Opcional)</label>
+            <div style="display:flex; gap:0.35rem;">
+              <input type="text" id="prod-sku" class="form-input" placeholder="Ex: GA226 (ou deixe vazio)" />
+              <button type="button" class="btn btn-secondary btn-sm" onclick="app.generateAutoSku()" title="Gerar código automático">⚡</button>
+            </div>
+          </div>
+
+          <div class="form-group col-4">
+            <label class="form-label">Categoria *</label>
+            <select id="prod-category" class="form-select">
+              <option value="Alternador">Alternador e Componentes</option>
+              <option value="Motor de Partida">Motor de Partida</option>
+              <option value="Relés e Fusíveis">Relés e Fusíveis</option>
+              <option value="Iluminação e Lâmpadas">Iluminação e Lâmpadas</option>
+              <option value="Baterias e Cabos">Baterias e Cabos</option>
+              <option value="Injeção e Ignição">Injeção e Ignição</option>
+              <option value="Chicotes e Conectores">Chicotes e Conectores</option>
+              <option value="Sensores e Atuadores">Sensores e Atuadores</option>
+              <option value="Insumos e Diversos">Insumos e Diversos</option>
+            </select>
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Marca / Fabricante</label>
+            <input type="text" id="prod-brand" class="form-input" placeholder="Ex: Bosch, Gauss, Ikro, DNI, Moura" />
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Código de Barras (EAN)</label>
+            <div style="display:flex; gap:0.35rem;">
+              <input type="text" id="prod-barcode" class="form-input" placeholder="Bipe ou digite..." />
+              <button type="button" class="btn btn-secondary btn-sm" onclick="app.openBarcodeScanner('fill-product')">📷</button>
+            </div>
+          </div>
+
+          <div class="form-group col-12">
+            <label class="form-label">Códigos Equivalentes / Referência Cruzada (separados por vírgula)</label>
+            <input type="text" id="prod-equivalents" class="form-input" placeholder="Ex: Bosch F00M144136, Ikro IK5136, VW 036903803G, Magneti Marelli..." />
+          </div>
+        </div>
+
+        <div class="form-section-title">2. Especificações Elétricas, Aplicação e Localização</div>
+        <div class="form-grid">
+          <div class="form-group col-3">
+            <label class="form-label">Voltagem</label>
+            <select id="prod-voltage" class="form-select">
+              <option value="12V">12V</option>
+              <option value="24V">24V</option>
+              <option value="Bivolt">Bivolt 12V/24V</option>
+              <option value="N/A">N/A</option>
+            </select>
+          </div>
+          <div class="form-group col-3">
+            <label class="form-label">Amperagem / Potência</label>
+            <input type="text" id="prod-amperage" class="form-input" placeholder="Ex: 40A, 90A, 55W, 60Ah" />
+          </div>
+          <div class="form-group col-3">
+            <label class="form-label">Pinos / Terminais / Polos</label>
+            <input type="text" id="prod-pins" class="form-input" placeholder="Ex: 4 Pinos, 5 Pinos, Direito" />
+          </div>
+          <div class="form-group col-3">
+            <label class="form-label">Condição da Peça</label>
+            <select id="prod-condition" class="form-select">
+              <option value="novo">Nova</option>
+              <option value="recondicionado">Recondicionada / Revisada</option>
+              <option value="casco_base_troca">Casco (Base de Troca)</option>
+            </select>
+          </div>
+
+          <div class="form-group col-8">
+            <label class="form-label">Aplicação (Veículos / Motores / Alternadores compatíveis)</label>
+            <input type="text" id="prod-vehicles" class="form-input" placeholder="Ex: Gol G5/G6, Fox, Palio Fire, Corsa, Alternador Bosch 90A..." />
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Localização na Oficina (Gaveta/Estante)</label>
+            <input type="text" id="prod-location" class="form-input" placeholder="Ex: Gaveteiro A - Gaveta 12" />
+          </div>
+        </div>
+
+        <div class="form-section-title">3. Preço de Compra, Preço de Venda e Porcentagens (%)</div>
+        <div class="pricing-simulator">
+          <div class="form-grid">
+            <div class="form-group col-3">
+              <label class="form-label">Preço de Compra (R$) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                id="prod-cost"
+                class="form-input"
+                required
+                placeholder="0.00"
+                oninput="app.onCostOrSaleInput('cost')"
+              />
+            </div>
+            <div class="form-group col-3">
+              <label class="form-label">Markup sobre Compra (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                id="prod-markup"
+                class="form-input"
+                placeholder="Ex: 100%"
+                oninput="app.onMarkupInput()"
+              />
+            </div>
+            <div class="form-group col-3">
+              <label class="form-label">Preço de Venda (R$) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                id="prod-sale"
+                class="form-input"
+                required
+                placeholder="0.00"
+                oninput="app.onCostOrSaleInput('sale')"
+              />
+            </div>
+            <div class="form-group col-3">
+              <label class="form-label">Lucro Líquido & Margem Real</label>
+              <div id="prod-profit-preview" style="padding:0.55rem 0.7rem; background:var(--bg-input); border-radius:6px; border:1px solid var(--border-color); font-size:0.84rem; font-weight:800; color:var(--success);">
+                R$ 0,00 (0%)
+              </div>
+            </div>
+          </div>
+          <div class="margin-presets">
+            <span style="font-size:0.75rem; color:var(--text-secondary); align-self:center;">Sugestão rápida de Markup:</span>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(35)">+35%</button>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(50)">+50%</button>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(80)">+80%</button>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(100)">+100% (Dobro)</button>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(150)">+150%</button>
+            <button type="button" class="preset-chip" onclick="app.applyPresetMarkup(200)">+200%</button>
+          </div>
+        </div>
+
+        <div class="form-section-title">4. Quantidade em Estoque e Alerta Mínimo</div>
+        <div class="form-grid">
+          <div class="form-group col-4">
+            <label class="form-label">Quantidade Atual (Inteiro)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              id="prod-qty"
+              class="form-input"
+              value="1"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+            />
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Estoque Mínimo (Alerta)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              id="prod-min-qty"
+              class="form-input"
+              value="2"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+            />
+          </div>
+          <div class="form-group col-4">
+            <label class="form-label">Unidade</label>
+            <select id="prod-unit" class="form-select">
+              <option value="UN">Unidade (UN)</option>
+              <option value="PAR">Par (PAR)</option>
+              <option value="KIT">Kit / Jogo (KIT)</option>
+              <option value="CX">Caixa (CX)</option>
+              <option value="MT">Metro (MT)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section-title">5. Links de Compra da Peça & Fornecedores (Mercado Livre, Shopee, Distribuidora)</div>
+        <div id="prod-links-container" style="display:flex; flex-direction:column; gap:0.6rem;"></div>
+        <div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="app.addPurchaseLinkRow()">
+            ➕ Adicionar Link de Compra / Fornecedor
+          </button>
+        </div>
+
+        <div class="form-section-title">6. Observações de Bancada</div>
+        <div class="form-group">
+          <textarea id="prod-notes" rows="2" class="form-textarea" placeholder="Dicas de aplicação, detalhes de garantia ou observações..."></textarea>
+        </div>
+
+        <div class="modal-footer" style="margin: 0 -1.35rem -1.35rem;">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('modal-product')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Peça</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: MOVIMENTAÇÃO DE ESTOQUE (ENTRADA / SAÍDA / ORDEM DE SERVIÇO) -->
+  <div class="modal-backdrop" id="modal-movement">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-movement-title">📥 Registrar Movimentação</div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('modal-movement')">✕</button>
+      </div>
+      <form id="form-movement" class="modal-body" onsubmit="app.handleSaveMovement(event)">
+        <input type="hidden" id="mov-type" value="entrada" />
+
+        <div class="form-group">
+          <label class="form-label">Peça *</label>
+          <select id="mov-product-id" class="form-select" required onchange="app.onMovementProductChange()"></select>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group col-6">
+            <label class="form-label">Tipo de Operação</label>
+            <select id="mov-reason" class="form-select">
+              <option value="compra_reposicao">📥 Entrada de Compra / Reposição</option>
+              <option value="ordem_servico">🔧 Saída para Ordem de Serviço (Carro)</option>
+              <option value="venda_balcao">🛒 Saída Venda de Balcão</option>
+              <option value="recondicionamento">♻️ Uso em Reforma de Bancada</option>
+              <option value="garantia_troca">⚠️ Troca / Garantia</option>
+            </select>
+          </div>
+          <div class="form-group col-6">
+            <label class="form-label">Quantidade (Unidades Inteiras) *</label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              id="mov-qty"
+              class="form-input"
+              value="1"
+              required
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+            />
+          </div>
+        </div>
+
+        <!-- Campos de Preço na Entrada (com cálculo automático de porcentagem) -->
+        <div id="mov-pricing-fields" class="pricing-simulator">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--accent); margin-bottom:0.5rem;">
+            💰 Atualização de Preço de Compra / Venda nesta Entrada
+          </div>
+          <div class="form-grid">
+            <div class="form-group col-4">
+              <label class="form-label">Custo Unit. (R$)</label>
+              <input type="number" step="0.01" id="mov-unit-cost" class="form-input" oninput="app.onMovPriceInput('cost')" />
+            </div>
+            <div class="form-group col-4">
+              <label class="form-label">Markup (%)</label>
+              <input type="number" step="0.1" id="mov-markup" class="form-input" oninput="app.onMovPriceInput('markup')" />
+            </div>
+            <div class="form-group col-4">
+              <label class="form-label">Venda Unit. (R$)</label>
+              <input type="number" step="0.01" id="mov-unit-price" class="form-input" oninput="app.onMovPriceInput('sale')" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:0.5rem;">
+            <label class="form-label">Fornecedor ou Link utilizado na compra</label>
+            <input type="text" id="mov-supplier" class="form-input" placeholder="Ex: Mercado Livre / Autopeças Express" />
+          </div>
+        </div>
+
+        <!-- Campos de Veículo / Placa / Cliente na Saída (OS) -->
+        <div id="mov-vehicle-fields" style="display:none; flex-direction:column; gap:0.75rem;">
+          <div class="form-grid">
+            <div class="form-group col-8">
+              <label class="form-label">Veículo / Modelo</label>
+              <input type="text" id="mov-vehicle" class="form-input" placeholder="Ex: Gol G5 1.6 / Civic 2014" />
+            </div>
+            <div class="form-group col-4">
+              <label class="form-label">Placa</label>
+              <input type="text" id="mov-plate" class="form-input" placeholder="ABC-1D23" style="text-transform:uppercase;" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cliente / Nº da Ordem de Serviço (OS)</label>
+            <input type="text" id="mov-customer" class="form-input" placeholder="Ex: OS #115 - Sr. Carlos" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Observações</label>
+          <input type="text" id="mov-notes" class="form-input" placeholder="Ex: NF 4512 ou detalhe do serviço..." />
+        </div>
+
+        <div class="modal-footer" style="margin: 0 -1.35rem -1.35rem;">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('modal-movement')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="mov-submit-btn">Confirmar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: HISTÓRICO DE PREÇOS E DETALHES DA PEÇA -->
+  <div class="modal-backdrop" id="modal-history">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-history-title">📈 Histórico de Preços & Links</div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('modal-history')">✕</button>
+      </div>
+      <div class="modal-body" id="modal-history-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: CONECTAR CELULAR VIA WI-FI (QR CODE) -->
+  <div class="modal-backdrop" id="modal-qr">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <div class="modal-title">📱 Conectar Celular via Wi-Fi da Oficina</div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('modal-qr')">✕</button>
+      </div>
+      <div class="modal-body" id="modal-qr-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: LEITOR DE CÓDIGO DE BARRAS PELA CÂMERA -->
+  <div class="modal-backdrop" id="modal-scanner">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <div class="modal-title">📷 Leitor de Código de Barras</div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeBarcodeScanner()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Captura Nativa da Câmera do Celular (Funciona mesmo sem HTTPS em http://192.168...) -->
+        <input
+          type="file"
+          id="scanner-photo-input"
+          accept="image/*"
+          capture="environment"
+          style="display:none;"
+          onchange="app.handleCameraPhotoCapture(event)"
+        />
+        <button
+          type="button"
+          class="btn btn-primary"
+          style="width:100%; padding:0.9rem; font-size:0.98rem;"
+          onclick="document.getElementById('scanner-photo-input').click()"
+        >
+          📸 Abrir Câmera do Celular (Foto do Código)
+        </button>
+
+        <!-- Aviso de HTTPS caso o navegador bloqueie o vídeo ao vivo no IP HTTP -->
+        <div
+          id="scanner-https-alert"
+          style="display:none; background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.45); border-radius:8px; padding:0.8rem; font-size:0.8rem;"
+        >
+          <div style="font-weight:800; color:var(--accent); margin-bottom:0.35rem;">
+            🔒 Quer usar o leitor de vídeo contínuo ao vivo?
+          </div>
+          <p style="color:var(--text-secondary); margin-bottom:0.55rem;">
+            O navegador do celular só pede permissão de câmera ao vivo em conexões <strong>HTTPS</strong>. Use o botão laranja acima (<em>Foto do Código</em>) ou toque abaixo para mudar para o modo HTTPS seguro:
+          </p>
+          <a id="scanner-https-link" href="#" class="btn btn-secondary btn-sm" style="width:100%;">
+            🔒 Mudar para HTTPS Seguro (Libera Permissão de Câmera)
+          </a>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.35rem;">
+            * Ao abrir o HTTPS pela 1ª vez, toque em <strong>"Avançado" → "Ir para 192.168..."</strong>.
+          </div>
+        </div>
+
+        <div class="scanner-video-wrap" id="scanner-video-box">
+          <video id="scanner-video" playsinline muted></video>
+          <div class="scanner-laser"></div>
+        </div>
+
+        <p style="font-size:0.82rem; color:var(--text-secondary); text-align:center;" id="scanner-status-msg">
+          Aponte a câmera para o código de barras da peça ou digite abaixo:
+        </p>
+
+        <div style="display:flex; gap:0.5rem;">
+          <input type="text" id="scanner-manual-input" class="form-input" placeholder="Ou digite/bipe com leitor USB aqui..." />
+          <button class="btn btn-primary" onclick="app.submitManualBarcode()">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/db.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
