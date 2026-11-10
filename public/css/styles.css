@@ -347,6 +347,20 @@ body {
   width: 100%;
 }
 
+.backup-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.backup-actions-grid .btn {
+  width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+
 .panel-box {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -1284,7 +1298,8 @@ table.data-table tr:last-child td {
     width: 100%;
   }
 
-  .products-grid {
+  .products-grid,
+  .backup-actions-grid {
     grid-template-columns: 1fr;
   }
 

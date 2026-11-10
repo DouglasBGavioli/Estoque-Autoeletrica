@@ -64,6 +64,15 @@ class LocalFirstStore {
       req.onerror = (e) => reject(e.target.error);
     });
 
+    if (!localStorage.getItem('ae_clean_zero_v1')) {
+      await Promise.all([
+        this.clearAndBulkPut('products', []),
+        this.clearAndBulkPut('movements', []),
+        this.clearAndBulkPut('pending_ops', [])
+      ]);
+      localStorage.setItem('ae_clean_zero_v1', 'true');
+    }
+
     // Tenta sincronizar imediatamente ao abrir e agenda verificação automática via Wi-Fi
     await this.syncWithServer();
     setInterval(() => {

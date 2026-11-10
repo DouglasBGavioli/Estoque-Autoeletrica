@@ -84,9 +84,6 @@
             <img src="/icon.svg" alt="EletrocarDoGuiGui" class="brand-icon-img-sm" />
             <span class="mobile-brand-name">EletrocarDoGuiGui</span>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="app.openQrModal()">
-            📱 Wi-Fi / QR
-          </button>
         </div>
 
         <div class="topbar-search">
@@ -346,7 +343,7 @@
               </div>
 
               <div class="form-section-title">Exportar Dados</div>
-              <div style="display:flex; flex-wrap:wrap; gap:0.65rem;">
+              <div class="backup-actions-grid">
                 <button class="btn btn-primary" onclick="app.exportBackupJson()">
                   📥 Baixar Backup Completo (.JSON)
                 </button>
@@ -359,9 +356,9 @@
               <p style="font-size:0.8rem; color:var(--text-secondary);">
                 Você também pode transferir os dados entre PC e Celular enviando o arquivo <code>.json</code> pelo WhatsApp e importando abaixo:
               </p>
-              <div style="display:flex; flex-direction:column; gap:0.5rem;">
+              <div style="display:flex; flex-direction:column; gap:0.55rem;">
                 <input type="file" id="import-backup-file" accept=".json" class="form-input" />
-                <div style="display:flex; gap:0.5rem;">
+                <div class="backup-actions-grid">
                   <button class="btn btn-secondary" onclick="app.handleImportBackup(false)">
                     ➕ Mesclar com Estoque Atual
                   </button>

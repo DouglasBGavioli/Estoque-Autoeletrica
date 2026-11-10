@@ -1,4 +1,4 @@
-const CACHE_NAME = 'autoeletrica-estoque-v7';
+const CACHE_NAME = 'autoeletrica-estoque-v10';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
